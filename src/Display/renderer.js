@@ -10,5 +10,6 @@ document.getElementById('reset-to-system').addEventListener('click', async () =>
 
 document.getElementById('update-bot-username').addEventListener("click", async () => {
 	let botUsername = document.getElementById('botUsernameId');
-	botUsername.innerText = `${await getBotInfo.getBotUsername()}`;
+	let newBotUsername = await getBotInfo.getBotUsername()
+	botUsername.innerText = `${newBotUsername}`;
 })
