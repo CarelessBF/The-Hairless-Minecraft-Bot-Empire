@@ -1,0 +1,21 @@
+{
+  "name": "hairless-mc",
+  "version": "1.0.0",
+  "main": "./src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "Careless",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "dotenv": "^16.4.7",
+    "mineflayer": "^4.27.0",
+    "mineflayer-pathfinder": "^2.4.5"
+  },
+  "devDependencies": {
+    "electron": "^35.1.5"
+  }
+}
