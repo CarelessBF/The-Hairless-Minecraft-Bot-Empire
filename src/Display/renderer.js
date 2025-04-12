@@ -2,14 +2,33 @@ document.getElementById('toggle-dark-mode').addEventListener('click', async () =
 	const isDarkMode = await window.darkMode.toggle()
 	document.getElementById('theme-source').innerHTML = isDarkMode ? 'Dark' : 'Light'
 })
-  
-document.getElementById('reset-to-system').addEventListener('click', async () => {
-	await window.darkMode.system()
-	document.getElementById('theme-source').innerHTML = 'System'
+
+async function handleUserInputSetBotUsername({ target: { value } }) {
+	let botUsername = document.getElementById('botUsernameId');
+ 	let newBotUsername = await getBotInfo.setBotUsername(value);
+ 	botUsername.innerText = `${newBotUsername}`;
+}
+
+async function handleUserInputSetBotHost({ target: { value } }) {
+	let botHost = document.getElementById('botHostId');
+ 	let newBotHost = await getBotInfo.setBotHost(value);
+ 	botHost.innerText = `${newBotHost}`;
+}
+
+async function handleUserInputSetBotPort({ target: { value } }) {
+	let botPort = document.getElementById('botPortId');
+ 	let newBotPort = await getBotInfo.setBotPort(value);
+ 	botPort.innerText = `${newBotPort}`;
+}
+
+document.getElementById("userInputSetBotUsername").addEventListener("change", handleUserInputSetBotUsername)
+document.getElementById("userInputSetBotHost").addEventListener("change", handleUserInputSetBotHost)
+document.getElementById("userInputSetBotPort").addEventListener("change", handleUserInputSetBotPort)
+
+document.getElementById("quit-app").addEventListener("click", () => {
+	appControl.quitApp()
 })
 
-document.getElementById('update-bot-username').addEventListener("click", async () => {
-	let botUsername = document.getElementById('botUsernameId');
-	let newBotUsername = await getBotInfo.getBotUsername()
-	botUsername.innerText = `${newBotUsername}`;
+document.getElementById("restart-app").addEventListener("click", () => {
+	appControl.restartApp()
 })

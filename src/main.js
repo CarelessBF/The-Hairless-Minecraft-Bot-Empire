@@ -95,7 +95,7 @@ class MinecraftBot {
 
 		//On Spawn Event
 		this.bot.on("spawn", () => {
-			addMainLog(`-[${this.username}]-: has spawned in!`)
+			addMainLog(`-[${this.username}]-: has spawned in!`)		
 			//console.log(`-[${this.username}]-: has spawned in!`);
 		});
 
@@ -143,6 +143,7 @@ class MinecraftBot {
 
 function main() {
 	
+	let serverConnectInfo = {};
 	let win;
 
 	function createWindow() {
@@ -153,6 +154,7 @@ function main() {
 		  autoHideMenuBar: true,
 		  webPreferences: {
 			nodeIntegration: true,
+			contextIsolation: true,
 			preload: path.join(__dirname, "./Display/preload.js")
 		  }
 		});
@@ -185,10 +187,39 @@ function main() {
 		nativeTheme.themeSource = 'system'
 	});
 
-	ipcMain.handle('get-botUsername', async () => {
-		let botUsername = "RepairbotTest";
+	ipcMain.handle("set-botusername", async (_event, value) => {
+		let botUsername = value;
+		serverConnectInfo["username"] = value
+		console.log(serverConnectInfo)
 		return botUsername
 	});
+
+	ipcMain.handle("set-bothost", async (_event, value) => {
+		let botHostname = value;
+		serverConnectInfo["host"] = value
+		console.log(serverConnectInfo)
+		return botHostname
+	});
+
+	ipcMain.handle("set-botport", async (_event, value) => {
+		let botPort = value;
+		serverConnectInfo["port"] = value
+		console.log(serverConnectInfo)
+		return botPort
+	});
+	
+	ipcMain.on("quit-App-Main", () => {
+		console.log("Closing Application!")
+		app.quit();
+
+		win = null;
+	})
+
+	ipcMain.on("restart-App-Main", () => {
+		console.log("Restarting Application!")
+		app.relaunch()
+		app.quit()
+	})
 
 	app.on('ready', () => {
 		createWindow();
