@@ -1,10 +1,9 @@
 const dotenv = require("dotenv").config();
 const mineflayer = require("mineflayer");
-const { goals, Movements } = require('mineflayer-pathfinder');
+const { goals, Movements, pathfinder } = require("mineflayer-pathfinder");
+const mineflayerViewer = require("prismarine-viewer").mineflayer
 const chalk = require("chalk");
 const fs = require("fs");
-const colors = require("./colors.js");
-const color = colors.color;
 const { app, BrowserWindow, ipcMain, protocol, nativeTheme } = require("electron")
 const { exit } = require("process");
 const url = require("url");
@@ -14,12 +13,10 @@ const trustedOperatorsArray = process.env.TRUSTED_OPERATORS;
 //Create a container of all Bot instances
 let bots = [];
 
-let mainLog = [
-	//[color.bgBlack + "Initializing Display HUD" + color.reset]
-];
+let mainLog = [];
 
 function addMainLog(text) {
-	mainLog.push([text + color.reset]);
+	mainLog.push([text]);
 };
 
 //Create a list of current Bots' names for easy access
@@ -42,7 +39,27 @@ class MinecraftBot {
 		//Calls for Bot Instance Initialization
 		this.initBot()
 	}
+
 	botLogs = []; 
+
+	startTreeFarm() {
+		let pos = this.bot.entity.position.clone()
+		let targetBlocksList = ["minecraft:oak_logs"]
+		let findTreeOptions = {matching: targetBlocksList, point: pos, maxDistance: 16}
+		let treeCoords = this.bot.findBlocks(findTreeOptions)
+		const RANGE_GOAL = 2 // get within this radius of the player
+		const defaultMove = new Movements(this.bot)
+		const target = treeCoords[0]
+		if (!target) {
+			this.bot.whisper("CarelessBF", "No more trees to chop!");
+			return
+		}
+		let { x: treeX, y: treeY, z: treeZ } = target.position
+	
+		this.bot.pathfinder.setMovements(defaultMove)
+		this.bot.pathfinder.setGoal(new GoalNear(treeX, treeY, treeZ, RANGE_GOAL))
+	}
+
 	//Initialize Bot Instance
 	initBot() {
 
@@ -55,6 +72,7 @@ class MinecraftBot {
 		});
 
 		//Calls for Initialization of Bot Event Listeners
+		this.bot.loadPlugin(pathfinder)
 		this.initEvents();
 	};
 
@@ -93,10 +111,12 @@ class MinecraftBot {
 			setTimeout(() => this.initBot(), 5000);
 		});
 
+
+
 		//On Spawn Event
 		this.bot.on("spawn", () => {
 			addMainLog(`-[${this.username}]-: has spawned in!`)		
-			//console.log(`-[${this.username}]-: has spawned in!`);
+			//mineflayerViewer(this.bot, { firstPerson: true, port: 3000, viewDistance: 3 })
 		});
 
 		//On Chat Event, console chat messages not made by a Bot instance
@@ -109,14 +129,30 @@ class MinecraftBot {
 			}
 		});
 
-		this.bot.on("whisper", async (username, jsonMsg) => {
+		this.bot.on("whisper", async (username, message, jsonMsg) => {
 			if (!this.trustedOperators.includes(username)) {
 				return
 			}
 			else {
-				this.chatLog(username, jsonMsg);
-				if (jsonMsg == `dc` || `bot disconnect`) {
+				this.chatLog(username, message, jsonMsg);
+				if (message === "dc" || message === "bot disconnect") {
 					this.bot.quit("disconnect.quiting");
+				}
+				if (message === "come" || message === "bot come" || message === "come to me" || message === "bot come to me") {
+					const RANGE_GOAL = 2 // get within this radius of the player
+					const defaultMove = new Movements(this.bot)
+					const target = this.bot.players[username]?.entity
+					if (!target) {
+						this.bot.whisper(username, `I don't see you ${username}!`);
+						return
+					}
+					const { x: playerX, y: playerY, z: playerZ } = target.position
+
+					this.bot.pathfinder.setMovements(defaultMove)
+					this.bot.pathfinder.setGoal(new GoalNear(playerX, playerY, playerZ, RANGE_GOAL))
+				}
+				if (message === "treefarm") {
+					this.startTreeFarm()
 				}
 			}
 		});
@@ -143,108 +179,108 @@ class MinecraftBot {
 
 function main() {
 	
-	let serverConnectInfo = {};
-	let win;
+	// let serverConnectInfo = {};
+	// let win;
 
-	function createWindow() {
+	// function createWindow() {
 
-		win = new BrowserWindow({
-		  width: 1600,
-		  height: 900,
-		  autoHideMenuBar: true,
-		  webPreferences: {
-			nodeIntegration: true,
-			contextIsolation: true,
-			preload: path.join(__dirname, "./Display/preload.js")
-		  }
-		});
+	// 	win = new BrowserWindow({
+	// 	  width: 1600,
+	// 	  height: 900,
+	// 	  autoHideMenuBar: true,
+	// 	  webPreferences: {
+	// 		nodeIntegration: true,
+	// 		contextIsolation: true,
+	// 		preload: path.join(__dirname, "./Display/preload.js")
+	// 	  }
+	// 	});
 
-		win.loadURL(url.format({
-			pathname: path.join(__dirname, "./Display/index.html"),
-			protocol: "file",
-			slashes: true
-		}));
+	// 	win.loadURL(url.format({
+	// 		pathname: path.join(__dirname, "./Display/index.html"),
+	// 		protocol: "file",
+	// 		slashes: true
+	// 	}));
 
-		win.on("ready-to-show", () => win.show());
+	// 	win.on("ready-to-show", () => win.show());
 
-		win.webContents.openDevTools();
+	// 	win.webContents.openDevTools();
 
-		win.on("closed", () => {
-			win = null;
-		});
-	};
+	// 	win.on("closed", () => {
+	// 		win = null;
+	// 	});
+	// };
 
-	ipcMain.handle('dark-mode:toggle', () => {
-		if (nativeTheme.shouldUseDarkColors) {
-		  nativeTheme.themeSource = 'light'
-		} else {
-		  nativeTheme.themeSource = 'dark'
-		}
-		return nativeTheme.shouldUseDarkColors
-	});
+	// ipcMain.handle('dark-mode:toggle', () => {
+	// 	if (nativeTheme.shouldUseDarkColors) {
+	// 	  nativeTheme.themeSource = 'light'
+	// 	} else {
+	// 	  nativeTheme.themeSource = 'dark'
+	// 	}
+	// 	return nativeTheme.shouldUseDarkColors
+	// });
 	  
-	ipcMain.handle('dark-mode:system', () => {
-		nativeTheme.themeSource = 'system'
-	});
+	// ipcMain.handle('dark-mode:system', () => {
+	// 	nativeTheme.themeSource = 'system'
+	// });
 
-	ipcMain.handle("set-botusername", async (_event, value) => {
-		let botUsername = value;
-		serverConnectInfo["username"] = value
-		console.log(serverConnectInfo)
-		return botUsername
-	});
+	// ipcMain.handle("set-botusername", async (_event, value) => {
+	// 	let botUsername = value;
+	// 	serverConnectInfo["username"] = value
+	// 	console.log(serverConnectInfo)
+	// 	return botUsername
+	// });
 
-	ipcMain.handle("set-bothost", async (_event, value) => {
-		let botHostname = value;
-		serverConnectInfo["host"] = value
-		console.log(serverConnectInfo)
-		return botHostname
-	});
+	// ipcMain.handle("set-bothost", async (_event, value) => {
+	// 	let botHostname = value;
+	// 	serverConnectInfo["host"] = value
+	// 	console.log(serverConnectInfo)
+	// 	return botHostname
+	// });
 
-	ipcMain.handle("set-botport", async (_event, value) => {
-		let botPort = value;
-		serverConnectInfo["port"] = value
-		console.log(serverConnectInfo)
-		return botPort
-	});
+	// ipcMain.handle("set-botport", async (_event, value) => {
+	// 	let botPort = value;
+	// 	serverConnectInfo["port"] = value
+	// 	console.log(serverConnectInfo)
+	// 	return botPort
+	// });
 	
-	ipcMain.on("quit-App-Main", () => {
-		console.log("Closing Application!")
-		app.quit();
+	// ipcMain.on("quit-App-Main", () => {
+	// 	console.log("Closing Application!")
+	// 	app.quit();
 
-		win = null;
-	})
+	// 	win = null;
+	// })
 
-	ipcMain.on("restart-App-Main", () => {
-		console.log("Restarting Application!")
-		app.relaunch()
-		app.quit()
-	})
+	// ipcMain.on("restart-App-Main", () => {
+	// 	console.log("Restarting Application!")
+	// 	app.relaunch()
+	// 	app.quit()
+	// })
 
-	app.on('ready', () => {
-		createWindow();
+	// app.on('ready', () => {
+	// 	createWindow();
 	  
-		app.on('activate', () => {
-		  if (BrowserWindow.getAllWindows().length === 0) 
-			createWindow();
-		})
-	});
+	// 	app.on('activate', () => {
+	// 	  if (BrowserWindow.getAllWindows().length === 0) 
+	// 		createWindow();
+	// 	})
+	// });
 	
 
-	app.on('window-all-closed', () => {
-		if (process.platform !== 'darwin') {
-			app.quit()
-			win = null;
-		} 
-	});
+	// app.on('window-all-closed', () => {
+	// 	if (process.platform !== 'darwin') {
+	// 		app.quit()
+	// 		win = null;
+	// 	} 
+	// });
 
 	//Define the maximum number of Bots to be created
 	// let maxNumOfBots = 1;
 	
 	//Create a single Bot using the MinecraftBot template class and push it into Bot Container and Names list
-	//let currBot = "Repairbot";
-	//bots.push(new MinecraftBot(currBot));
-	//botNames.push(currBot);
+	let currBot = "Repairbot";
+	bots.push(new MinecraftBot(currBot));
+	botNames.push(currBot);
 	
 	//Creates multiple Bots equal to the number of maximum Bots variable
 	/*for(var i = 0; i < maxNumOfBots; i++) {

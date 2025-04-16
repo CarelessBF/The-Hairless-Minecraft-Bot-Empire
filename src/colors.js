@@ -20,6 +20,6 @@ const color = {
 	underline: `\x1b[4m`
 }
 
-export {
+export default {
 	color
 }
